@@ -11,11 +11,10 @@ const path = require('path');
 
 module.exports = {
     register:function(req,res){
+        console.log(req.session.store);
         res.render('userRegister',{
             title:"Registro de Usuario",
-            css:'index.css',
-            user:req.session.user
-
+            css:'index.css'
         })
     },
     processRegister:function(req,res){
@@ -30,11 +29,15 @@ module.exports = {
                     email:req.body.email.trim(),
                     password:bcrypt.hashSync(req.body.pass.trim(),10),
                     avatar:(req.files[0])?req.files[0].filename:"default.png",
-                    rol:"user"
+                    rol:(req.session.store)?req.session.store:"user"
                 }
             )
             .then(result => {
                 console.log(result)
+                if(req.session.store){
+                    req.session.store = result;
+                    return res.redirect('/stores/register')
+                }
                 return res.redirect('/users/login');
             })
             .catch(errores => {
@@ -119,6 +122,47 @@ module.exports = {
         }else{
             return res.redirect('/')
         }
-       
+    },
+    updateProfile:function(req,res){
+        db.Users.update(
+            {
+                fecha:req.body.fecha,
+                avatar:(req.files[0])?req.files[0].filename:req.session.user.avatar,
+                direccion:(req.body.direccion!="")?req.body.direccion.trim():null,
+                ciudad:(req.body.ciudad!="")?req.body.ciudad.trim():null,
+                provincia:(req.body.provincia!="")?req.body.provincia.trim():null
+            },
+            {
+                where:{
+                    id:req.params.id
+                }
+            }
+
+        )
+        .then( result => {
+            console.log(result)
+            return res.redirect('/users/profile')
+        })
+        .catch( errors => {
+            console.log(errors)
+        })
+    },
+    delete: function(req,res){
+        //borrar el archivo de imagen de perfil
+        if(fs.existsSync('public/images/avatares/'+req.session.user.avatar)&&req.session.user.avatar != "default.png"){
+            fs.unlinkSync('public/images/avatares/'+req.session.user.avatar)
+        }
+        //cerrar la session y borrar cookie
+        req.session.destroy();
+        if(req.cookies.userMercadoLiebre){
+            res.cookie('userMercadoLiebre','',{maxAge:-1});
+        }
+        //borrar el registro de la base de datos
+        db.Users.destroy({
+            where:{
+                id:req.params.id
+            }
+        })
+        return res.redirect('/')
     }
 }

@@ -26,6 +26,9 @@ router.get('/login',controller.login);
 router.post('/login',loginValidator, controller.processLogin);
 
 router.get('/profile', controller.profile);
+router.put('/updateProfile/:id',multerAvatar.any(),controller.updateProfile);
+
+router.delete('/delete/:id',controller.delete);
 
 router.get('/logout',controller.logout);
 
